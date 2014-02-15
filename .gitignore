@@ -1,6 +1,14 @@
+  ____ 
+ / ___|
+| |    
+| |___ 
+ \____|
+
 # Object files
 *.o
 *.ko
+*.obj
+*.elf
 
 # Libraries
 *.lib
@@ -16,3 +24,35 @@
 *.exe
 *.out
 *.app
+*.i*86
+*.x86_64
+*.hex
+
+  ____            
+ / ___| _     _   
+| |   _| |_ _| |_ 
+| |__|_   _|_   _|
+ \____||_|   |_|  
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
