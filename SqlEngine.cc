@@ -12,6 +12,7 @@
 #include <fstream>
 #include "Bruinbase.h"
 #include "SqlEngine.h"
+#include "BTreeIndex.h"
 
 using namespace std;
 
@@ -130,9 +131,70 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 
 RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 {
-  /* your code here */
+  RecordFile rf;   // RecordFile containing the table
+  RecordId   rid;  // record cursor for table scanning
+  BTreeIndex bti;  // BTree Index for inserting indices
+  ifstream ifs;    // Input file stream for the load file
 
-  return 0;
+  int    ret;
+  int    key;     
+  string value;
+  string line;
+
+  // open the table file
+  if ((ret = rf.open(table + ".tbl", 'w')) < 0) {
+    fprintf(stderr, "Error: Cannot access/create table %s\n", table.c_str());
+    return ret;
+  }
+
+  // open an index file
+  if (index) {
+    if (ret = bti.open(table + ".idx", 'w')) {
+      fprintf(stderr, "Error: Cannot access/create %s index file\n", loadfile.c_str());
+      goto exit_load;
+    }
+  }
+
+  // open the laod file
+  ifs.open(loadfile.c_str(), ifstream::in);
+  if (ret = !ifs.is_open()) {
+    fprintf(stderr, "Error: Cannot open %s file\n", loadfile.c_str());
+    goto exit_load;
+  }
+
+  // read load file line by line and insert, parse and insert tuples into record file and index
+  getline(ifs, line);
+  for (unsigned lineNum = 1; ifs.good(); lineNum++) {
+    if (parseLoadLine(line, key, value)) {
+      fprintf(stderr, "Warning: Could not parse line %u from file %s\n", lineNum, loadfile.c_str());
+      goto next_line;
+    }
+
+    if (rf.append(key, value, rid)) {
+      fprintf(stderr, "Warning: Could not insert tuple with key %i into %s RecordFile\n", key, table.c_str());
+      goto next_line;
+    }
+
+    if (index) {
+      if (bti.insert(key, rid)) {
+        fprintf(stderr, "Warning: Could not insert key %i into index\n", key);
+        goto next_line;
+      }
+    }
+    next_line:
+    getline(ifs, line);
+  }
+  ret = 1;
+
+  // close files and streams and return
+  exit_load:
+  rf.close();
+  ifs.close();
+  if (index) {
+    bti.close();
+  }
+
+  return ret;
 }
 
 RC SqlEngine::parseLoadLine(const string& line, int& key, string& value)
