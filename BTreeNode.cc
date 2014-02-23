@@ -350,6 +350,28 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
   return 0;
 }
 
+/**
+ * Read the pid from the eid entry.
+ * @param eid[IN] the entry number to read the pid from
+ * @param pid[OUT] the PageId from the slot
+ * @return 0 if successful. Return an error code if there is an error.
+ */
+RC BTNonLeafNode::readEntry(int eid, PageId& pid)
+{
+  if (eid >= getKeyCount())
+    return 1;
+
+  if (eid < 0) {
+    PageId *ptr = (PageId *) (buffer + PageFile::PAGE_SIZE - sizeof(PageId));
+    pid = *ptr;
+  } else {
+    NodeEntry* ne = (NodeEntry *) buffer + eid;
+    pid = ne->pid;
+  }
+ 
+  return 0;
+}
+
 /*
  * Initialize the root node with (pid1, key, pid2).
  * @param pid1[IN] the first PageId to insert

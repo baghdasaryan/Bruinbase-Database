@@ -168,6 +168,14 @@ class BTNonLeafNode {
     RC locateChildPtr(int searchKey, PageId& pid);
 
    /**
+    * Read the pid from the eid entry.
+    * @param eid[IN] the entry number to read the pid from
+    * @param pid[OUT] the PageId from the slot
+    * @return 0 if successful. Return an error code if there is an error.
+    */
+    RC readEntry(int eid, PageId& pid);
+
+   /**
     * Initialize the root node with (pid1, key, pid2).
     * @param pid1[IN] the first PageId to insert
     * @param key[IN] the key that should be inserted between the two PageIds
