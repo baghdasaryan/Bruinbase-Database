@@ -2,6 +2,16 @@
 
 using namespace std;
 
+/**
+ * Class constructor.
+ * Clears the buffer and computes maxKeyCount.
+ */
+BTLeafNode::BTLeafNode()
+  : maxKeyCount((PageFile::PAGE_SIZE - sizeof(PageId)) / (sizeof(NodeEntry)))
+{
+  bzero(buffer, PageFile::PAGE_SIZE);
+}
+
 /*
  * Read the content of the node from the page pid in the PageFile pf.
  * @param pid[IN] the PageId to read
@@ -9,7 +19,9 @@ using namespace std;
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+{
+  return pf.read(pid, buffer);
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -18,14 +30,25 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+{
+  return pf.write(pid, buffer);
+}
 
 /*
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
 int BTLeafNode::getKeyCount()
-{ return 0; }
+{
+  NodeEntry *ne = (NodeEntry *) buffer;
+
+  int count;
+  for (count = 0; (ne->key != 0) && (count < maxKeyCount); count++, ne++) {
+    ;
+  }
+
+  return count;
+}
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -34,7 +57,34 @@ int BTLeafNode::getKeyCount()
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
-{ return 0; }
+{
+  int nodeId = 0;
+  NodeEntry* newEntry = NULL;
+  NodeEntry* curEntry = (NodeEntry *) buffer + getKeyCount();
+
+  if (getKeyCount() >= maxKeyCount)
+    return RC_NODE_FULL;
+
+  // Use the end of the node if can't locate an appropriate entry
+  if (locate(key, nodeId)) {
+    newEntry = curEntry;
+  } else {
+    newEntry = (NodeEntry *) buffer + nodeId;
+
+    // Shift node entries to the right
+    while (curEntry != newEntry) {
+      NodeEntry* nextEntry = curEntry - 1;
+      *curEntry = *nextEntry;
+      curEntry = nextEntry;
+    }
+  }
+
+  // Insert data
+  newEntry->key = key;
+  newEntry->rid = rid;
+
+  return 0;
+}
 
 /*
  * Insert the (key, rid) pair to the node
@@ -48,18 +98,60 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
  */
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
-{ return 0; }
+{
+  RC rc = 0;
+  int index = 0;
+  int total = getKeyCount();
+  int half = (total + 1) / 2;
+
+  if ((rc = locate(key, index)) != 0)
+    return rc;
+
+  NodeEntry ne = { key, rid }; // new entry
+
+  for (NodeEntry* cur = (NodeEntry *) buffer + index; index < half; cur++, index++) {
+    NodeEntry tmp = *cur;
+    *cur = ne;
+    ne = tmp;
+  }
+ 
+  if (index == half)
+    siblingKey = ne.key;
+  else
+    siblingKey = ((NodeEntry *) buffer + half)->key;
+
+  sibling.insert(ne.key, ne.rid);
+
+  for (NodeEntry* cur = (NodeEntry *) buffer + half; half < total; cur++, half++) {
+    sibling.insert(cur->key, cur->rid);
+    cur->key = 0;
+  }
+
+  return 0;
+}
 
 /*
  * Find the entry whose key value is larger than or equal to searchKey
  * and output the eid (entry number) whose key value >= searchKey.
  * Remeber that all keys inside a B+tree node should be kept sorted.
  * @param searchKey[IN] the key to search for
- * @param eid[OUT] the entry number that contains a key larger than or equalty to searchKey
+ * @param eid[OUT] the entry number that contains a key larger than or equal to searchKey
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::locate(int searchKey, int& eid)
-{ return 0; }
+{
+  NodeEntry* ne = (NodeEntry *) buffer;
+  for (eid = 0; eid < getKeyCount(), ne->key < searchKey; eid++, ne++) {
+    ;
+  }
+
+  if (eid == getKeyCount()) {
+    eid = -1;
+    return RC_END_OF_TREE;
+  }
+
+  return 0;
+}
 
 /*
  * Read the (key, rid) pair from the eid entry.
@@ -69,22 +161,47 @@ RC BTLeafNode::locate(int searchKey, int& eid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
-{ return 0; }
+{
+  if (eid < 0 || eid >= getKeyCount())
+    return 1;
+
+  NodeEntry* ne = (NodeEntry *) buffer + eid;
+  key = ne->key;
+  rid = ne->rid;
+  return 0;
+}
 
 /*
- * Return the pid of the next slibling node.
+ * Return the pid of the next sibling node.
  * @return the PageId of the next sibling node 
  */
 PageId BTLeafNode::getNextNodePtr()
-{ return 0; }
+{
+  PageId* pid = (PageId *) (buffer + PageFile::PAGE_SIZE) - 1;
+  return *pid;
+}
 
 /*
- * Set the pid of the next slibling node.
+ * Set the pid of the next sibling node.
  * @param pid[IN] the PageId of the next sibling node 
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
-{ return 0; }
+{
+  PageId* ptr = (PageId *) (buffer + PageFile::PAGE_SIZE) - 1;
+  *ptr = pid;
+  return 0;
+}
+
+/**
+ * Class constructor.
+ * Computes maxKeyCount.
+ */
+BTNonLeafNode::BTNonLeafNode()
+  : maxKeyCount((PageFile::PAGE_SIZE - sizeof(PageId)) / (sizeof(NodeEntry)))
+{
+  ;
+}
 
 /*
  * Read the content of the node from the page pid in the PageFile pf.
@@ -93,7 +210,9 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+{
+  return pf.read(pid, buffer);
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -102,14 +221,25 @@ RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+{
+  return pf.write(pid, buffer);
+}
 
 /*
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
 int BTNonLeafNode::getKeyCount()
-{ return 0; }
+{
+  NodeEntry *ne = (NodeEntry *) buffer;
+
+  int count;
+  for (count = 0; (ne->key != 0) && (count < maxKeyCount); count++, ne++) {
+    ;
+  }
+
+  return count;
+}
 
 
 /*
@@ -119,7 +249,34 @@ int BTNonLeafNode::getKeyCount()
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTNonLeafNode::insert(int key, PageId pid)
-{ return 0; }
+{
+  int nodeId = 0;
+  NodeEntry* newEntry = NULL;
+  NodeEntry* curEntry = (NodeEntry *) buffer + getKeyCount();
+
+  if (getKeyCount() >= maxKeyCount)
+    return RC_NODE_FULL;
+
+  // Use beginning of the node if can't locate an appropriate entry
+  if (locateChildPtr(key, nodeId)) {
+    newEntry = (NodeEntry *) buffer;
+  } else {
+    newEntry = (NodeEntry *) buffer + nodeId + 1;
+
+    // Shift node entries to the right
+    while (curEntry != newEntry) {
+      NodeEntry* nextEntry = curEntry - 1;
+      *curEntry = *nextEntry;
+      curEntry = nextEntry;
+    }
+  }
+
+  // Insert data
+  newEntry->key = key;
+  newEntry->pid = pid;
+
+  return 0;
+}
 
 /*
  * Insert the (key, pid) pair to the node
@@ -132,7 +289,45 @@ RC BTNonLeafNode::insert(int key, PageId pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, int& midKey)
-{ return 0; }
+{
+  RC rc = 0;
+  int index = 0;
+  int total = getKeyCount();
+  int half = (total + 1) / 2;
+
+  if ((rc = locateChildPtr(key, index)) != 0)
+    return rc;
+
+  index++;
+  NodeEntry ne = { key, pid }; // new entry
+
+  for (NodeEntry* cur = (NodeEntry *) buffer + index; index < half; cur++, index++) {
+    NodeEntry tmp = *cur;
+    *cur = ne;
+    ne = tmp;
+  }
+ 
+  if (index != half) {
+    NodeEntry* cur = (NodeEntry *) buffer + half;
+    NodeEntry tmp = *cur;
+    *cur = ne;
+    ne = tmp;
+  }
+
+  midKey = ne.key;
+
+  NodeEntry* cur = (NodeEntry *)buffer + half;
+  sibling.initializeRoot(ne.pid, cur->key, cur->pid);
+  cur->key = 0;
+  half++;
+
+  for (NodeEntry* cur = (NodeEntry *) buffer + half; half < total; cur++, half++) {
+    sibling.insert(cur->key, cur->pid);
+    cur->key = 0;
+  }
+
+  return 0;
+}
 
 /*
  * Given the searchKey, find the child-node pointer to follow and
@@ -142,7 +337,18 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
-{ return 0; }
+{
+  NodeEntry* ne = (NodeEntry *) buffer ;
+  for (pid = getKeyCount() - 1; pid >= 0, ne->key > searchKey; pid--, ne--) {
+    ;
+  }
+
+  if (pid == -1) {
+    return RC_END_OF_TREE;
+  }
+
+  return 0;
+}
 
 /*
  * Initialize the root node with (pid1, key, pid2).
@@ -152,4 +358,14 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
-{ return 0; }
+{
+  bzero(buffer, PageFile::PAGE_SIZE);
+
+  NodeEntry root = { key, pid2 };
+  *((NodeEntry *) buffer) = root;
+
+  PageId *ptr1 = (PageId *) (buffer + PageFile::PAGE_SIZE - sizeof(PageId));
+  *ptr1 = pid1;
+
+  return 0;
+}

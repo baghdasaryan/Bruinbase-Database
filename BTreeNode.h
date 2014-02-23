@@ -19,6 +19,12 @@
 class BTLeafNode {
   public:
    /**
+    * Class constructor.
+    * Clears the buffer and computes maxKeyCount.
+    */
+    BTLeafNode();
+
+   /**
     * Insert the (key, rid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.
     * @param key[IN] the key to insert
@@ -102,6 +108,19 @@ class BTLeafNode {
     * that contains the node.
     */
     char buffer[PageFile::PAGE_SIZE];
+
+   /**
+    * A structure representing an entry of a leaf node.
+    */
+    struct NodeEntry {
+      int key;
+      RecordId rid;
+    };
+
+   /**
+    * The maximum number of keys that can be stored in a node.
+    */
+    const int maxKeyCount;
 }; 
 
 
@@ -110,6 +129,12 @@ class BTLeafNode {
  */
 class BTNonLeafNode {
   public:
+   /**
+    * Class constructor.
+    * Computes maxKeyCount.
+    */
+    BTNonLeafNode();
+
    /**
     * Insert a (key, pid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.
@@ -180,6 +205,19 @@ class BTNonLeafNode {
     * that contains the node.
     */
     char buffer[PageFile::PAGE_SIZE];
+
+   /**
+    * A structure representing an entry of a non-leaf node.
+    */
+    struct NodeEntry {
+      int key;
+      PageId pid;
+    };
+
+   /**
+    * The maximum number of keys that can be stored in a node.
+    */
+    const int maxKeyCount;
 }; 
 
 #endif /* BTNODE_H */
