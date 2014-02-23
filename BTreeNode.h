@@ -72,7 +72,6 @@ class BTLeafNode {
     */
     PageId getNextNodePtr();
 
-
    /**
     * Set the next slibling node PageId.
     * @param pid[IN] the PageId of the next sibling node 
