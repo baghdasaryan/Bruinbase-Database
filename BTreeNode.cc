@@ -1,5 +1,5 @@
 #include "BTreeNode.h"
-
+#include <cstdio>
 using namespace std;
 
 /**
@@ -10,6 +10,11 @@ BTLeafNode::BTLeafNode()
   : maxKeyCount((PageFile::PAGE_SIZE - sizeof(PageId)) / (sizeof(NodeEntry)))
 {
   bzero(buffer, PageFile::PAGE_SIZE);
+}
+
+int BTLeafNode::getMaxKeyCount()
+{
+    return (PageFile::PAGE_SIZE - sizeof(PageId)) / sizeof(NodeEntry);
 }
 
 /*
@@ -53,7 +58,7 @@ int BTLeafNode::getKeyCount()
 /*
  * Insert a (key, rid) pair to the node.
  * @param key[IN] the key to insert
- * @param rid[IN] the RecordId to insert
+ * @param rid[IN] the Rp eecordId to insert
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
@@ -61,7 +66,6 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
   int nodeId = 0;
   NodeEntry* newEntry = NULL;
   NodeEntry* curEntry = (NodeEntry *) buffer + getKeyCount();
-
   if (getKeyCount() >= maxKeyCount)
     return RC_NODE_FULL;
 
@@ -141,8 +145,7 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
 RC BTLeafNode::locate(int searchKey, int& eid)
 {
   NodeEntry* ne = (NodeEntry *) buffer;
-  for (eid = 0; eid < getKeyCount(), ne->key < searchKey; eid++, ne++) {
-    ;
+  for (eid = 0; eid < getKeyCount() && ne->key < searchKey; eid++, ne++) {
   }
 
   if (eid == getKeyCount()) {
@@ -339,7 +342,7 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
 RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 {
   NodeEntry* ne = (NodeEntry *) buffer ;
-  for (pid = getKeyCount() - 1; pid >= 0, ne->key > searchKey; pid--, ne--) {
+  for (pid = getKeyCount() - 1; pid >= 0 && ne->key > searchKey; pid--, ne--) {
     ;
   }
 
