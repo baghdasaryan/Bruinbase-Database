@@ -29,6 +29,40 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
+    /* Another way to open an index file:
+     * 
+     * Use RecordId (size ~ 8 bytes) instead of data[PageFile::PAGE_SIZE]
+     * (PAGE_SIZE ~ 1024 bytes) as shown in BTreeIndex::close() --> this
+     * might save some memmory
+     */
+
+    RC rc;
+    // Open index file
+    if ((rc = pf.open(indexname, mode)) != 0)
+       return rc;
+
+    // Load root Pid and the tree height
+    char data[PageFile::PAGE_SIZE];
+    if (pf.endPid() == 0) {    // Empty file
+        // Empty tree
+        rootPid = -1;
+        treeHeight = 0;
+
+        // Put a placeholder for rootPid and treeHeight       
+        if ((rc = pf.write(0, data)) != 0) {
+            return rc;
+        }
+    } else {
+        // Try ro read previously stored data
+        if ((rc = pf.read(0, data)) != 0) {
+            return rc;
+        }
+
+        // Assign rootPid and treeHeight 
+        rootPid = *((PageId *) data);
+        treeHeight = *((int *) (data + sizeof(PageId)));
+    }
+
     return 0;
 }
 
@@ -38,7 +72,20 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-    return 0;
+    // Prepare root Pid and the tree height
+    char dataToStore[PageFile::PAGE_SIZE];
+    *((PageId *) dataToStore) = rootPid;
+    *((int *) (dataToStore + sizeof(PageId))) = treeHeight;
+
+    /* Another way to do this:
+     * 
+    RecordId dataToStore = { rootPid, treeHeight };
+     */
+
+    // Store data
+    pf.write(0, dataToStore);
+
+    return pf.close();
 }
 
 /*
@@ -79,12 +126,32 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 /*
  * Read the (key, rid) pair at the location specified by the index cursor,
  * and move foward the cursor to the next entry.
- * @param cursor[IN/OUT] the cursor pointing to an leaf-node index entry in the b+tree
+ * @param cursor[IN/OUT] the cursor pointing to a leaf-node index entry in the b+tree
  * @param key[OUT] the key stored at the index cursor location.
  * @param rid[OUT] the RecordId stored at the index cursor location.
  * @return error code. 0 if no error
  */
 RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
+    BTLeafNode node;
+    // Read the content of the node from pid in pf
+    node.read(cursor.pid, pf);
+    // Read the (key, rid) pair from eid entry
+    node.readEntry(cursor.eid, key, rid);
+
+    // Check cursor
+    if (cursor.pid <= 0 || cursor.pid >= pf.endPid())
+        return RC_INVALID_CURSOR;
+
+    // Move the cursor foward
+    cursor.eid++;
+    if (cursor.eid >= node.getKeyCount()) // End of node
+    {
+      // Move to the next node
+      cursor.pid = node.getNextNodePtr();
+      // Reset cursor
+      cursor.eid = 0;
+    }
+
     return 0;
 }

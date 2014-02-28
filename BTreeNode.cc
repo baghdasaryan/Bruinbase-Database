@@ -162,7 +162,7 @@ RC BTLeafNode::locate(int searchKey, int& eid)
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
 {
   if (eid < 0 || eid >= getKeyCount())
-    return 1;
+    return RC_INVALID_CURSOR;
 
   NodeEntry* ne = (NodeEntry *) buffer + eid;
   key = ne->key;
@@ -358,7 +358,7 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 RC BTNonLeafNode::readEntry(int eid, PageId& pid)
 {
   if (eid >= getKeyCount())
-    return 1;
+    return RC_INVALID_CURSOR;
 
   if (eid < 0) {
     PageId *ptr = (PageId *) (buffer + PageFile::PAGE_SIZE - sizeof(PageId));
