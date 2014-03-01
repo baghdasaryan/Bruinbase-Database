@@ -120,6 +120,30 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
  */
 RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 {
+    // Start searching for data from the root node
+    PageId pid = rootPid;
+
+    // Traverse the tree until reaching a Non-Leaf node
+    for (int i = 0, eid; i < treeHeight - 1; i++) {
+        BTNonLeafNode node;
+
+        // Read node data
+        node.read(pid, pf);
+
+        // Obtain next node's pid
+        node.locateChildPtr(searchKey, eid);
+        node.readEntry(eid, pid);
+    }
+
+    BTLeafNode node;
+
+    // Read node data
+    node.read(pid, pf);
+ 
+    // Set cursor's pid amd eid
+    cursor.pid = pid;
+    node.locate(searchKey, cursor.eid);
+
     return 0;
 }
 
