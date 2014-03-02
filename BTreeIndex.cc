@@ -33,7 +33,7 @@ RC BTreeIndex::open(const string& indexname, char mode)
      * 
      * Use RecordId (size ~ 8 bytes) instead of data[PageFile::PAGE_SIZE]
      * (PAGE_SIZE ~ 1024 bytes) as shown in BTreeIndex::close() --> this
-     * might save some memmory
+     * might save some memory
      */
 
     RC rc;
@@ -48,17 +48,17 @@ RC BTreeIndex::open(const string& indexname, char mode)
         rootPid = -1;
         treeHeight = 0;
 
-        // Put a placeholder for rootPid and treeHeight       
+        // Put a placeholder for rootPid and treeHeight
         if ((rc = pf.write(0, data)) != 0) {
             return rc;
         }
     } else {
-        // Try ro read previously stored data
+        // Try to read previously stored data
         if ((rc = pf.read(0, data)) != 0) {
             return rc;
         }
 
-        // Assign rootPid and treeHeight 
+        // Assign rootPid and treeHeight
         rootPid = *((PageId *) data);
         treeHeight = *((int *) (data + sizeof(PageId)));
     }
@@ -89,6 +89,146 @@ RC BTreeIndex::close()
 }
 
 /*
+ * Insert (key, RecordId) pair at the root level.
+ * @warning This function should not be called directly.
+ * @param key[IN] the key for the value inserted into the index
+ * @param rid[IN] the RecordId for the record being inserted into the index
+ * @return error code. 0 if no error
+ */
+RC BTreeIndex::insertAtRoot(int key, const RecordId& rid)
+{
+    RC rc;
+
+    // Insert data into a new root node
+    BTLeafNode root;
+    if ((rc = root.insert(key, rid)) != 0)
+        return rc;
+
+    // Update private vars
+    rootPid = pf.endPid();
+    treeHeight = 1;
+
+    // Write node (contents)
+    if ((rc = root.write(rootPid, pf)) != 0)
+        return rc;
+
+    return 0;
+}
+
+/*
+ * Inserts a (key, RecordId) pair into a leaf node.
+ * @warning This function should not be called directly.
+ * @param key[IN] the key for the value inserted into the index
+ * @param rid[IN] the RecordId for the record being inserted into the index
+ * @param pid[IN] pid of the node where the search should begin
+ * @param newNodeKey[OUT] the first key of the newly inserted node in case of an
+ * overflow, otherwise -1
+ * @param newNodePid[OUT] newly inserted node's pid in case of an overflow
+ * @return error code. 0 if no error
+ */
+RC BTreeIndex::insertAtLeafNode(int key, const RecordId& rid, PageId pid,
+                    int& newNodeKey, PageId& newNodePid)
+{
+    RC rc;
+    newNodeKey = -1;
+    BTLeafNode node;
+
+    // Read the content of the node from pid in pf
+    node.read(pid, pf);
+
+    // Insert data into the node
+    rc = node.insert(key, rid);
+    // Check for an overflow and other errors
+    if (rc == RC_NODE_FULL) {
+        // Insert data into a new node
+        BTLeafNode newNode;
+        if ((newNode.insertAndSplit(key, rid, newNode, newNodeKey)) != 0)
+            return rc;
+
+        newNodePid = pf.endPid();   // new node's future pid
+
+        // Update node pointers
+        newNode.setNextNodePtr(node.getNextNodePtr());
+        newNode.setNextNodePtr(newNodePid);
+
+        // Write node [contents]
+        if ((rc = newNode.write(newNodePid, pf)) != 0)
+            return rc;
+    } else if (rc != 0) {
+        return rc;
+    }
+
+    // Write node [contents]
+    if ((rc = node.write(pid, pf)) != 0)
+        return rc;
+
+    return 0;
+}
+
+/*
+ * Recursively insert a (key, RecordId) pair into the index.
+ * @warning This function should not be called directly.
+ * @param key[IN] the key for the value inserted into the index
+ * @param rid[IN] the RecordId for the record being inserted into the index
+ * @param pid[IN] pid of the node where the search should begin
+ * @param height[IN] the height of the pid node (e.g. root has height 1)
+ * @param newNodeKey[OUT] the first key of the newly inserted node in case of an
+ * overflow, otherwise -1
+ * @param newNodePid[OUT] newly inserted node's pid in case of an overflow
+ * @return error code. 0 if no error
+ */
+RC BTreeIndex::insertAtNonLeafNode(int key, const RecordId& rid, PageId pid, int height,
+                       int& newNodeKey, PageId& newNodePid)
+{
+    RC rc;
+    int childIndex;
+    PageId childPid;
+    BTNonLeafNode node;
+
+    // Read the content of the node from pid in pf and obtain child's pid
+    node.read(pid, pf);
+    node.locateChildPtr(key, childIndex);
+    node.readEntry(childIndex, childPid);
+
+    // Check if we reached the leaf node
+    if (height + 1 == treeHeight) {
+        if ((rc = insertAtLeafNode(key, rid, childPid, newNodeKey, newNodePid)) != 0)
+            return rc;
+    } else {
+        if ((rc = insertAtNonLeafNode(key, rid, childPid, height + 1, newNodeKey, newNodePid)) != 0)
+            return rc;
+    }
+
+    // Check for overflows down the tree
+    if (newNodeKey != -1) {
+        // Try to insert new node's information into the current node
+        rc = node.insert(newNodeKey, newNodePid);
+        if (rc == 0) {
+            newNodeKey = -1;
+        } else if (rc == RC_NODE_FULL) {
+            // Insert data into a new node
+            BTNonLeafNode newNode;
+            if ((newNode.insertAndSplit(newNodeKey, newNodePid, newNode, newNodeKey)) != 0)
+                return rc;
+
+            newNodePid = pf.endPid();   // new node's future pid
+
+            // Write node [contents]
+            if ((rc = newNode.write(newNodePid, pf)) != 0)
+                return rc;
+        } else {
+            return rc;
+        }
+
+        // Write node [contents]
+        if ((rc = node.write(pid, pf)) != 0)
+            return rc;
+    }
+
+    return 0;
+}
+
+/*
  * Insert (key, RecordId) pair to the index.
  * @param key[IN] the key for the value inserted into the index
  * @param rid[IN] the RecordId for the record being inserted into the index
@@ -96,8 +236,39 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
+    // Add a root node if the tree is empty
+    if (treeHeight == 0) {
+        return insertAtRoot(key, rid);
+    }
+
+    RC rc;
+    int newNodeKey;
+    PageId newNodePid;
+    if (treeHeight == 2) {
+        if ((rc = insertAtLeafNode(key, rid, rootPid, newNodeKey, newNodePid)) != 0)
+            return rc;
+    } else {
+        if ((rc = insertAtNonLeafNode(key, rid, rootPid, treeHeight + 1, newNodeKey, newNodePid)) != 0)
+            return rc;
+    }
+
+    // Check for overflows down the tree
+    if (newNodeKey != -1) {
+        // Insert data into a new node
+        BTNonLeafNode root;
+        root.initializeRoot(rootPid, newNodeKey, newNodePid);
+
+        // Update private variables
+        rootPid = pf.endPid();   // new root's future pid
+        treeHeight += 1;
+
+        // Write node [contents]
+        if ((rc = root.write(rootPid, pf)) != 0)
+            return rc;
+    }
+
     return 0;
-}
+}   
 
 /*
  * Find the leaf-node index entry whose key value is larger than or 
@@ -127,7 +298,7 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
     for (int i = 0, eid; i < treeHeight - 1; i++) {
         BTNonLeafNode node;
 
-        // Read node data
+        // Read the content of the node from pid in pf
         node.read(pid, pf);
 
         // Obtain next node's pid
@@ -140,7 +311,7 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
     // Read node data
     node.read(pid, pf);
  
-    // Set cursor's pid amd eid
+    // Set cursor's pid and eid
     cursor.pid = pid;
     node.locate(searchKey, cursor.eid);
 
@@ -167,7 +338,7 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
     if (cursor.pid <= 0 || cursor.pid >= pf.endPid())
         return RC_INVALID_CURSOR;
 
-    // Move the cursor foward
+    // Move the cursor forward
     cursor.eid++;
     if (cursor.eid >= node.getKeyCount()) // End of node
     {

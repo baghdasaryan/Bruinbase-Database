@@ -330,19 +330,19 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
 
 /*
  * Given the searchKey, find the child-node pointer to follow and
- * output it in pid.
+ * output its index.
  * @param searchKey[IN] the searchKey that is being looked up.
- * @param pid[OUT] the pointer to the child node to follow.
+ * @param eid[OUT] the index of child node to follow.
  * @return 0 if successful. Return an error code if there is an error.
  */
-RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
+RC BTNonLeafNode::locateChildPtr(int searchKey, int& eid)
 {
   NodeEntry* ne = (NodeEntry *) buffer ;
-  for (pid = getKeyCount() - 1; pid >= 0 && ne->key > searchKey; pid--, ne--) {
+  for (eid = getKeyCount() - 1; eid >= 0 && ne->key > searchKey; eid--, ne--) {
     ;
   }
 
-  if (pid == -1) {
+  if (eid == -1) {
     return RC_END_OF_TREE;
   }
 

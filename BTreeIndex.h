@@ -49,7 +49,7 @@ class BTreeIndex {
    * @return error code. 0 if no error
    */
   RC close();
-    
+
   /**
    * Insert (key, RecordId) pair to the index.
    * @param key[IN] the key for the value inserted into the index
@@ -91,6 +91,44 @@ class BTreeIndex {
   RC readForward(IndexCursor& cursor, int& key, RecordId& rid);
   
  private:
+  /*
+   * Insert (key, RecordId) pair at the root level.
+   * @warning This function should not be called directly.
+   * @param key[IN] the key for the value inserted into the index
+   * @param rid[IN] the RecordId for the record being inserted into the index
+   * @return error code. 0 if no error
+   */
+  RC insertAtRoot(int key, const RecordId&);
+  
+  /*
+   * Inserts a (key, RecordId) pair into a leaf node.
+   * @warning This function should not be called directly.
+   * @param key[IN] the key for the value inserted into the index
+   * @param rid[IN] the RecordId for the record being inserted into the index
+   * @param pid[IN] pid of the node where the search should begin
+   * @param newNodeKey[OUT] the first key of the newly inserted node in case of an
+   * overflow, otherwise -1
+   * @param newNodePid[OUT] newly inserted node's pid in case of an overflow
+   * @return error code. 0 if no error
+   */
+  RC insertAtLeafNode(int key, const RecordId& rid, PageId pid,
+                                  int& newNodeKey, PageId& newNodePid);
+
+  /*
+   * Recursively insert a (key, RecordId) pair into the index.
+   * @warning This function should not be called directly.
+   * @param key[IN] the key for the value inserted into the index
+   * @param rid[IN] the RecordId for the record being inserted into the index
+   * @param pid[IN] pid of the node where the search should begin
+   * @param height[IN] the height of the pid node (e.g. root has height 1)
+   * @param newNodeKey[OUT] the first key of the newly inserted node in case of an
+   * overflow, otherwise -1
+   * @param newNodePid[OUT] newly inserted node's pid in case of an overflow
+   * @return error code. 0 if no error
+   */
+  RC insertAtNonLeafNode(int key, const RecordId& rid, PageId pid, int height,
+                         int& newNodeKey, PageId& newNodePid);
+
   PageFile pf;         /// the PageFile used to store the actual b+tree in disk
 
   PageId   rootPid;    /// the PageId of the root node
