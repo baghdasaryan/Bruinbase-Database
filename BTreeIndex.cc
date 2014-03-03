@@ -18,7 +18,7 @@ using namespace std;
 BTreeIndex::BTreeIndex()
 {
     rootPid = -1;
-    treeHeight = -1;
+    treeHeight = 0  ;
 }
 
 /*
@@ -44,16 +44,21 @@ RC BTreeIndex::open(const string& indexname, char mode)
 
     // Load root Pid and the tree height
     char data[PageFile::PAGE_SIZE];
-    if (pf.endPid() == 0) {    // Empty file
+     // Empty file
+    if (pf.endPid() == 0) 
+    {   
         // Empty tree
         rootPid = -1;
         treeHeight = 0;
 
         // Put a placeholder for rootPid and treeHeight
-        if ((rc = pf.write(0, data)) != 0) {
+        if ((rc = pf.write(0, data)) != 0) 
+        {
             return rc;
         }
-    } else {
+    } 
+    else 
+    {
         // Try to read previously stored data
         if ((rc = pf.read(0, data)) != 0) {
             return rc;
@@ -98,7 +103,7 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insertAtRoot(int key, const RecordId& rid)
 {
-    RC rc;
+    RC rc = RC_INVALID_CURSOR;
 
     // Insert data into a new root node
     BTLeafNode root;
@@ -248,7 +253,8 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
     if (treeHeight == 2) {
         if ((rc = insertAtLeafNode(key, rid, rootPid, newNodeKey, newNodePid)) != 0)
             return rc;
-    } else {
+    } 
+    else {
         if ((rc = insertAtNonLeafNode(key, rid, rootPid, treeHeight + 1, newNodeKey, newNodePid)) != 0)
             return rc;
     }
@@ -294,6 +300,8 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 {
     // Start searching for data from the root node
     PageId pid = rootPid;
+    
+    if (treeHeight <= 0) return RC_NO_SUCH_RECORD;
 
     // Traverse the tree until reaching a Non-Leaf node
     for (int i = 0, eid; i < treeHeight - 1; i++) {

@@ -1,38 +1,46 @@
-#include <BTreeNode.h>
+#include <BTreeIndex.h>
+#include <RecordFile.h>
 #include <test_util.h>
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <cstdio>
 #include <vector>
-static void generateTestFile(std::string filename, RecordFile& rf, int range);
+
+static void generateTestFileRecordFile(std::string filename,
+                                       RecordFile& rf, 
+                                       int         range);
+                                       
+static void generateEmptyTestIndexFile(std::string filename,
+                                       PageFile&   pf);
 
 int main( int argc, const char* argv[] )
 {
     int test = argc > 1 ? atoi(argv[1]) : 0;
     int testStatus = 0;
+    PageFile index_file;
+    generateEmptyTestIndexFile("index_file.txt", index_file);
+    index_file.close();
     switch (test)
     {
         // Breadth Test
         // Excersise some basic functionality, test nothings
         case 0: 
         {
+            BTreeIndex bt_index;
+            ASSERT(0 == bt_index.open("index_file.txt", 'w'));
             int range = 100;
             std::cout << "Breadth Test" << std::endl;
             std::ostringstream sout;
             std::string value;
-            int eid;
+            IndexCursor cursor = {0,0};
             int key;
             
             RecordId rid;
             RecordFile rf;
-            generateTestFile("testFile.txt", rf, range);
-            std::vector<BTLeafNode *> LeafNodes;
-            LeafNodes.push_back(new BTLeafNode);
-            BTLeafNode* bt = *(LeafNodes.end() - 1);
+            generateTestFileRecordFile("testRecordFile.txt", rf, range);
             
-            ASSERT(0 == bt->getKeyCount());
-            ASSERT(0 != bt->locate(0,eid));
+            ASSERT(0 != bt_index.locate(1,cursor));
             
             size_t i = 0;
             size_t j = 0;
@@ -48,20 +56,7 @@ int main( int argc, const char* argv[] )
                     }
                     rid.sid = j;
                     ASSERT(0 == rf.read(rid, key, value));
-                    if (     bt->getKeyCount() != 0 && 
-                        0 == bt->getKeyCount() % 85)
-                    {
-                        LeafNodes.push_back(new BTLeafNode);
-                        BTLeafNode *sibling = *(LeafNodes.end() - 1);
-                        ASSERT(0 == bt->insertAndSplit(count/2, rid, *sibling, key));
-                        ASSERT(sibling->getKeyCount() ==  bt->getKeyCount())
-                        bt = sibling;
-                        ASSERT(bt->insert(key + 1, rid) == 0);   
-                    }
-                    else
-                    {
-                        ASSERT(bt->insert(key + 1, rid) == 0);
-                    }                  
+                    ASSERT(0 == bt_index.insert(key + 1, rid));                
                     count++;
                 }
                 i++;
@@ -74,15 +69,25 @@ int main( int argc, const char* argv[] )
     }
     return testStatus;
 }
-
-static void generateTestFile(std::string filename, RecordFile& rf, int range)
+                                     
+static void generateTestFileRecordFile(std::string filename,
+                                       RecordFile& rf, 
+                                       int         range)
 {
     RecordId rid = {0,0};
     unlink(filename.c_str());
-    rf.open(filename, 'w');
-    for (int i = 0; i < range; ++i)
+    rf.open(filename, 'W');
+    for (int i = 1; i < range + 1; ++i)
     {
         char c[3] = {'a' + i % 26,'\n', '\0'};
-        ASSERT(0 == rf.append(i + 1, std::string(c), rid));
+        ASSERT(0 == rf.append(i, std::string(c), rid));
     }
 }
+
+static void generateEmptyTestIndexFile(std::string filename,
+                                       PageFile&   pf)
+{
+    unlink(filename.c_str());
+    pf.open(filename, 'W');
+}
+
