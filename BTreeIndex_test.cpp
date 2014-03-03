@@ -29,7 +29,7 @@ int main( int argc, const char* argv[] )
         {
             BTreeIndex bt_index;
             ASSERT(0 == bt_index.open("index_file.txt", 'w'));
-            int range = 100;
+            int range = 12;
             std::cout << "Breadth Test" << std::endl;
             std::ostringstream sout;
             std::string value;

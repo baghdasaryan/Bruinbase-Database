@@ -197,7 +197,7 @@ RC BTreeIndex::insertAtNonLeafNode(int key, const RecordId& rid, PageId pid, int
     node.readEntry(childIndex, childPid);
 
     // Check if we reached the leaf node
-    if (height + 1 == treeHeight) {
+    if (height == treeHeight + 1) {
         if ((rc = insertAtLeafNode(key, rid, childPid, newNodeKey, newNodePid)) != 0)
             return rc;
     } else {
