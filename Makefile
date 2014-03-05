@@ -21,4 +21,4 @@ BTreeIndexTest: $(BTreeIndexTestSRC) test_util.h
 	g++ -I. -ggdb -o $@ $(BTreeIndexTestSRC)
 
 clean:
-	rm -f bruinbase bruinbase.exe BTreeNodeTest *.o *~ lex.sql.c SqlParser.tab.c SqlParser.tab.h 
+	rm -f bruinbase bruinbase.exe BTreeNodeTest BTreeIndexTest *.o *~ lex.sql.c SqlParser.tab.c SqlParser.tab.h 

@@ -78,6 +78,9 @@ Session.vim
 
 # Project specific files
 bruinbase
+bruinbase.exe
 lex.sql.c
 SqlParser.tab.c
 SqlParser.tab.h
+BTreeNodeTest
+BTreeIndexTest
