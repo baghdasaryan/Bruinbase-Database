@@ -112,7 +112,7 @@ class BTreeIndex {
    * @return error code. 0 if no error
    */
   RC insertAtLeafNode(int key, const RecordId& rid, PageId pid,
-                                  int& newNodeKey, PageId& newNodePid);
+                      int& newNodeKey, PageId& newNodePid);
 
   /*
    * Recursively insert a (key, RecordId) pair into the index.

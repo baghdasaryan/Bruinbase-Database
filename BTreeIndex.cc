@@ -128,7 +128,7 @@ RC BTreeIndex::insertAtRoot(int key, const RecordId& rid)
  * @return error code. 0 if no error
  */
 RC BTreeIndex::insertAtLeafNode(int key, const RecordId& rid, PageId pid,
-                    int& newNodeKey, PageId& newNodePid)
+                                int& newNodeKey, PageId& newNodePid)
 {
     RC rc;
     newNodeKey = -1;
@@ -179,7 +179,7 @@ RC BTreeIndex::insertAtLeafNode(int key, const RecordId& rid, PageId pid,
  * @return error code. 0 if no error
  */
 RC BTreeIndex::insertAtNonLeafNode(int key, const RecordId& rid, PageId pid, int height,
-                       int& newNodeKey, PageId& newNodePid)
+                                   int& newNodeKey, PageId& newNodePid)
 {
     RC rc;
     int childIndex;
