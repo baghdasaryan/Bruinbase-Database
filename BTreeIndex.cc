@@ -143,7 +143,7 @@ RC BTreeIndex::insertAtLeafNode(int key, const RecordId& rid, PageId pid,
     if (rc == RC_NODE_FULL) {
         // Insert data into a new node
         BTLeafNode newNode;
-        if ((newNode.insertAndSplit(key, rid, newNode, newNodeKey)) != 0)
+        if ((node.insertAndSplit(key, rid, newNode, newNodeKey)) != 0)
             return rc;
 
         newNodePid = pf.endPid();   // new node's future pid
@@ -209,7 +209,7 @@ RC BTreeIndex::insertAtNonLeafNode(int key, const RecordId& rid, PageId pid, int
         } else if (rc == RC_NODE_FULL) {
             // Insert data into a new node
             BTNonLeafNode newNode;
-            if ((newNode.insertAndSplit(newNodeKey, newNodePid, newNode, newNodeKey)) != 0)
+            if ((node.insertAndSplit(newNodeKey, newNodePid, newNode, newNodeKey)) != 0)
                 return rc;
 
             newNodePid = pf.endPid();   // new node's future pid

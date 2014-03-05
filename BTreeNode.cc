@@ -104,8 +104,16 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
   int half = (total + 1) / 2;
 
   if ((rc = locate(key, index)) != 0)
-    return rc;
-
+  {
+    if (RC_END_OF_TREE == rc)
+    {
+        index = total;
+    }
+    else
+    {
+        return rc;
+    }
+  }
   NodeEntry ne = { key, rid }; // new entry
 
   for (NodeEntry* cur = (NodeEntry *) buffer + index; index < half; cur++, index++) {
@@ -295,7 +303,16 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
   int half = (total + 1) / 2;
 
   if ((rc = locateChildPtr(key, index)) != 0)
-    return rc;
+  {
+    if (RC_END_OF_TREE == rc)
+    {
+        index = total;
+    }
+    else
+    {
+        return rc;
+    }
+  }
 
   index++;
   NodeEntry ne = { key, pid }; // new entry
