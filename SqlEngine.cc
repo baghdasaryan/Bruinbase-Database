@@ -94,7 +94,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
           if (diff < 0) goto next_tuple;
           break;
         case SelCond::LE:
-          if (diff > 0) goto next_tuple;
+          if (diff  > 0) goto next_tuple;
           break;
         }
       }
