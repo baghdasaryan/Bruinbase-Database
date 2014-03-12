@@ -150,7 +150,7 @@ RC BTreeIndex::insertAtLeafNode(int key, const RecordId& rid, PageId pid,
 
         // Update node pointers
         newNode.setNextNodePtr(node.getNextNodePtr());
-        newNode.setNextNodePtr(newNodePid);
+        node.setNextNodePtr(newNodePid);
 
         // Write node [contents]
         if ((rc = newNode.write(newNodePid, pf)) != 0)
