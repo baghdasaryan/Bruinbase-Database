@@ -100,6 +100,11 @@ class BTLeafNode {
     * @return 0 if successful. Return an error code if there is an error.
     */
     RC write(PageId pid, PageFile& pf);
+    
+    char * getBuffer()
+    {
+        return buffer;
+    }
 
   private:
    /**

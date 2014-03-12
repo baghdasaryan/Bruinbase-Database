@@ -343,7 +343,7 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
  */
 RC BTNonLeafNode::locateChildPtr(int searchKey, int& eid)
 {
-  eif = getKeyCount() - 1;
+  eid = getKeyCount() - 1;
   NodeEntry* ne = (NodeEntry *) buffer + eid;
   for (eid; eid >= 0 && ne->key > searchKey; eid--, ne--) {
     ;
