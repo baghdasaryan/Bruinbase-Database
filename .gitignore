@@ -86,4 +86,3 @@ BTreeNodeTest
 BTreeIndexTest
 *.idx # index files
 *.tbl # tables
-*.del
