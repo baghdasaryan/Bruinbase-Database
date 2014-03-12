@@ -84,3 +84,6 @@ SqlParser.tab.c
 SqlParser.tab.h
 BTreeNodeTest
 BTreeIndexTest
+*.idx # index files
+*.tbl # tables
+*.del

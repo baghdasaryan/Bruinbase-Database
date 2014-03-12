@@ -142,7 +142,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
     else
       bti.locate(0, cursor);
 
-    while (bti.readForward(cursor, key, rid) == 0) {
+    while ((bti.readForward(cursor, key, rid)) == 0) {
       // read the tuple
       if ((rc = rf.read(rid, key, value)) < 0) {
         fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
