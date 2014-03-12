@@ -316,7 +316,9 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
     node.read(pid, pf);
  
     // Set cursor's pid and eid
+    memset(&(cursor.pageBuf), 0, sizeof(PageFile::PAGE_SIZE));
     cursor.pid = pid;
+    cursor.bufferPid = -1;
     node.locate(searchKey, cursor.eid);
 
     return 0;
