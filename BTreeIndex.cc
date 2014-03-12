@@ -316,7 +316,9 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
     node.read(pid, pf);
  
     // Set cursor's pid and eid
+    memset(&(cursor.pageBuf), 0, sizeof(PageFile::PAGE_SIZE));
     cursor.pid = pid;
+    cursor.bufferPid = -1;
     node.locate(searchKey, cursor.eid);
 
     return 0;
@@ -334,7 +336,19 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
     BTLeafNode node;
     // Read the content of the node from pid in pf
-    node.read(cursor.pid, pf);
+    if (cursor.pid <= 0 || cursor.pid >= pf.endPid())
+        return RC_INVALID_CURSOR;
+
+    if (cursor.bufferPid == cursor.pid)
+    {
+        memcpy(node.getBuffer(), cursor.pageBuf, PageFile::PAGE_SIZE);
+    }
+    else
+    {
+        cursor.bufferPid = cursor.pid;
+        node.read(cursor.pid, pf);
+        memcpy(cursor.pageBuf, node.getBuffer(), PageFile::PAGE_SIZE);
+    }
     // Read the (key, rid) pair from eid entry
     node.readEntry(cursor.eid, key, rid);
 

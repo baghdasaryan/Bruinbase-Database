@@ -25,6 +25,10 @@ typedef struct {
   PageId  pid;  
   // The entry number inside the node
   int     eid;  
+  
+  char    pageBuf[PageFile::PAGE_SIZE];
+  
+  PageId  bufferPid;  
 } IndexCursor;
 
 /**
