@@ -260,8 +260,7 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 
   // read load file line by line and insert, parse and insert tuples into record file and index
   getline(ifs, line);
-  unsigned lineNum;
-  for (lineNum = 1; ifs.good(); lineNum++) {
+  for (unsigned lineNum = 1; ifs.good(); lineNum++) {
     if (parseLoadLine(line, key, value)) {
       fprintf(stderr, "Warning: Could not parse line %u from file %s\n", lineNum, loadfile.c_str());
       goto next_line;
