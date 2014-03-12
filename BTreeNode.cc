@@ -264,13 +264,13 @@ RC BTNonLeafNode::insert(int key, PageId pid)
     newEntry = (NodeEntry *) buffer;
   } else {
     newEntry = (NodeEntry *) buffer + nodeId + 1;
+  }
 
-    // Shift node entries to the right
-    while (curEntry != newEntry) {
-      NodeEntry* nextEntry = curEntry - 1;
-      *curEntry = *nextEntry;
-      curEntry = nextEntry;
-    }
+  // Shift node entries to the right
+  while (curEntry != newEntry) {
+    NodeEntry* nextEntry = curEntry - 1;
+    *curEntry = *nextEntry;
+    curEntry = nextEntry;
   }
 
   // Insert data
