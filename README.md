@@ -1,8 +1,8 @@
 Bruinbase-Database
 ==================
 
-Contributors:
--------------
+Contributors
+------------
 | Name                | Email                             |
 | ----                | -----                             |
 | Georgi Baghdasaryan | baghdasaryan@ucla.edu             |
@@ -69,10 +69,12 @@ and the second column is a string column with the name value.
 
 As in the above example, Bruinbase-Database supports simple SELECT statements. You can
 list only one table name in the FROM clause. You can have one of:
+
 * key
 * value
 * \*
 * COUNT(\*)
+
 in the SELECT clause. You can list multiple conditions in the WHERE clause, but
 all conditions should be ANDed together. OR is not supported. All basic
 comparison operators (<, <=, >, >=, =, <>) can be used as part of the
@@ -92,17 +94,17 @@ must be a single key and value pair per line, separated by a comma. The key must
 be an integer, and the value (a string) should be enclosed in double quotes,
 such as:
 
-1,"value 1"
-2,"value 2"
-...
-See *movie.del* file for an example
+1,"value 1"<br />
+2,"value 2"<br />
+...<br />
+See *movie.del* file for a load file example.
 
-Examples of load command:
+Load command examples:
 ```
 LOAD movie FROM 'movie.del'
 LOAD indexedMovie FROM 'movie.del' WITH INDEX
 ```
-Once the load completes, you should be able to run SELECT queries, as described above.
+After the load completes, you should be able to run SELECT queries, as described above.
 
 Once you are done, you can issue the QUIT command to exit:
 ```
